@@ -1,43 +1,89 @@
-fun printBothFields(player: Player, enemy: Player){
-    ("=== Поле ${player.name}====       === Поле ${enemy.name} ===")
-    print("   ")
-    for (c in 0..9) print("$c ")
-    print("      ")
-    print("    ")
-    for (c in 0..9) print("$c ")
-    println()
-    for (r in 0..9) {
-        print("$r  ")
-        for (c in 0..9) print("${player.field[r][c]} ")
-        print("       ")
-        print("$r  ")
-        for (c in 0..9) print("${enemy.field[r][c]} ")
-        println()
-}
-
 fun main() {
     val player = Player("Вы")
     val enemy = Player("Компьютер")
 
-    player.placeShip(3,2)
-    player.placeShip(3,3)
-    player.placeShip(3,4)
-    player.placeShip(3,5)
+    printRules()
 
-    enemy.placeShip(5,7)
-    enemy.placeShip(6,7)
-    enemy.placeShip(7,7)
+    println("=== РАССТАНОВКА ВАШИХ КОРАБЛЕЙ ===")
+    placePlayerShips(player)
 
-    printBothFields(player, enemy)
-    println()
+    println("\n=== КОМПЬЮТЕР РАССТАВЛЯЕТ КОРАБЛИ ===")
+    placeEnemyShips(enemy)
 
-    player.registerShort(true)
-    player.registerShort(false)
-    player.registerShort(true)
+    println("\n=== ИГРА НАЧАЛАСЬ ===")
+    var playerTurn = true
+    var totalMoves = 0
 
-    println("Выстрелов: ${player.shots}")
-    println("Попаданий: ${player.hits}")
+    while (player.hasShips() && enemy.hasShips()) {
+        printBothFields(player, enemy)
+        println("\nВаши корабли: ${player.countShips()} | Корабли врага: ${enemy.countShips()}") // Выводим остаток
+        println()
 
-    player.reset()
-    println(player.status())
+        if (playerTurn) {
+            print("Ваш ход. Введите координаты выстрела (row col) или 'quit': ")
+            val input = readln().trim().split(" ")
+
+            // ДЗ п.4: Выход из игры
+            if (input[0].equals("quit", ignoreCase = true)) {
+                println("Вы вышли из игры.")
+                return
+            }
+
+            if (input.size != 2) {
+                println("Ошибка: нужно два числа через пробел.")
+                continue
+            }
+            val r = input[0].toIntOrNull()
+            val c = input[1].toIntOrNull()
+            if (r == null || c == null) {
+                println("Ошибка: координаты должны быть числами.")
+                continue
+            }
+
+            if (!enemy.isInside(r, c)) {
+                println("Выстрел за границей поля! Попробуйте снова.")
+                continue
+            }
+            val cell = enemy.field()[r][c]
+            if (cell == CellState.HIT || cell == CellState.MISS) {
+                println("Сюда уже стреляли! Попробуйте снова.")
+                continue
+            }
+
+            totalMoves++
+            val hit = enemy.shoot(r, c)
+            if (hit) {
+                println("Попадание!")
+            } else {
+                println("Промах.")
+                playerTurn = false
+            }
+        } else {
+            println("Ход компьютера...")
+            var r: Int
+            var c: Int
+            do {
+                r = Random.nextInt(0, 10)
+                c = Random.nextInt(0, 10)
+            } while (player.field()[r][c] == CellState.HIT || player.field()[r][c] == CellState.MISS)
+
+            totalMoves++
+            val hit = player.shoot(r, c)
+            if (hit) {
+                println("Компьютер попал в ($r, $c)!")
+            } else {
+                println("Компьютер промахнулся в ($r, $c).")
+                playerTurn = true
+            }
+        }
+        println()
+    }
+
+    println("Игра длилась $totalMoves ходов.")
+
+    if (enemy.hasShips()) {
+        println("Победил компьютер!")
+    } else {
+        println("Вы победили!")
+    }
 }
